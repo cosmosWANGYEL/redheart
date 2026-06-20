@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>I ❤️ You - Three Cup Game</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: linear-gradient(135deg, #f5e6f5 0%, #fce4ec 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh; padding: 20px;
+}
+.container {
+  background: white; border-radius: 20px; padding: 40px;
+  max-width: 800px; width: 100%;
+  box-shadow: 0 10px 40px rgba(200,100,150,0.15); text-align: center;
+}
+h1 { color: #c2185b; margin-bottom: 10px; font-size: 28px; }
+.subtitle { color: #666; margin-bottom: 30px; font-size: 14px; }
+.instructions {
+  background: #f3e5f5; padding: 15px; border-radius: 10px;
+  margin-bottom: 20px; font-size: 14px; color: #555; line-height: 1.6;
+}
+.game-area { position: relative; min-height: 320px; margin: 30px 0; }
+.floating-heart {
+  position: absolute; font-size: 50px; top: 20px; left: 50%;
+  opacity: 0; z-index: 100; transform: translateX(-50%);
+}
+.cups-container {
+  display: flex; justify-content: center; gap: 30px;
+  margin-top: 50px;
+}
+.cup-wrapper {
+  position: relative; width: 110px; height: 160px;
+}
+.cup-wrapper.moving-left { animation: moveLeft 0.6s ease-in-out; }
+.cup-wrapper.moving-right { animation: moveRight 0.6s ease-in-out; }
+@keyframes moveLeft { 0%,100%{transform:translateX(0)} 50%{transform:translateX(-80px)} }
+@keyframes moveRight { 0%,100%{transform:translateX(0)} 50%{transform:translateX(80px)} }
+.cup {
+  width: 100%; height: 140px;
+  background: linear-gradient(160deg, #ce7fd4 0%, #e91e63 100%);
+  border-radius: 18px 18px 50% 50%;
+  position: relative;
+  box-shadow: 0 8px 20px rgba(233,30,99,0.35);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  cursor: default;
+}
+.cup.clickable { cursor: pointer; }
+.cup.clickable:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 14px 28px rgba(233,30,99,0.45);
+}
+.cup-label {
+  font-size: 30px; font-weight: 900;
+  color: white;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  user-select: none;
+  pointer-events: none;
+}
+.cup.revealed {
+  transform: translateY(-30px) !important;
+  box-shadow: 0 20px 35px rgba(233,30,99,0.5) !important;
+  cursor: default !important;
+}
+.cup.revealed .cup-label {
+  opacity: 1 !important;
+}
+.cup.revealed::after {
+  content: '';
+  position: absolute; top: 0; left: -60%;
+  width: 40%; height: 100%;
+  background: rgba(255,255,255,0.25);
+  border-radius: 18px 18px 50% 50%;
+  animation: shine 0.7s ease forwards;
+}
+@keyframes shine {
+  0% { left: -60%; opacity: 1; }
+  100% { left: 130%; opacity: 0; }
+}
+.hint {
+  position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+  font-size: 13px; color: #c2185b; font-weight: bold; white-space: nowrap;
+  animation: pulse-text 1.5s infinite;
+}
+@keyframes pulse-text { 0%,100%{opacity:0.6} 50%{opacity:1} }
+@keyframes dropHeart {
+  0%   { opacity:1; transform:translateX(-50%) translateY(-150px) scale(1); }
+  50%  { opacity:1; transform:translateX(-50%) translateY(-30px) scale(0.9); }
+  100% { opacity:0; transform:translateX(-50%) translateY(0) scale(0.5); }
+}
+.status-message {
+  font-size: 18px; color: #c2185b; margin: 20px 0;
+  font-weight: bold; min-height: 30px;
+}
+.message-box {
+  background: linear-gradient(135deg, #fce4ec 0%, #f3e5f5 100%);
+  padding: 28px; border-radius: 15px; margin: 30px 0 10px 0;
+  border: 3px solid #e91e63; font-size: 44px; font-weight: bold; color: #c2185b;
+  min-height: 80px; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.5s ease;
+}
+.message-box.show { opacity: 1; }
+.button-group { display:flex; gap:10px; justify-content:center; margin-top:30px; flex-wrap:wrap; }
+button {
+  padding: 14px 35px; font-size: 14px; border: 2px solid #e91e63;
+  background: linear-gradient(135deg, #ba68c8 0%, #e91e63 100%);
+  color: white; border-radius: 25px; cursor: pointer; font-weight: bold; transition: all 0.3s ease;
+}
+button:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(233,30,99,0.4); }
+button:active:not(:disabled) { transform: translateY(-1px); }
+button.secondary { background: white; color: #e91e63; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.confetti-piece { position: fixed; pointer-events: none; z-index: 9999; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎮 Three Cup Game</h1>
+  <p class="subtitle">Find the hidden ❤️</p>
+  <div class="instructions">
+    Watch the heart drop into the middle cup. The cups will shuffle — then look for the red heart.
+  </div>
+  <div class="status-message" id="statusMessage"></div>
+  <div class="game-area">
+    <div class="floating-heart" id="floatingHeart">❤️</div>
+    <div class="cups-container" id="cupsContainer">
+      <div class="cup-wrapper" data-pos="0">
+        <div class="cup" id="cup0">
+          <div class="cup-label">I</div>
+        </div>
+      </div>
+      <div class="cup-wrapper" data-pos="1">
+        <div class="hint" id="hint">← Click! →</div>
+        <div class="cup clickable" id="cup1" onclick="pickMiddleCup()">
+          <div class="cup-label">❤️</div>
+        </div>
+      </div>
+      <div class="cup-wrapper" data-pos="2">
+        <div class="cup" id="cup2">
+          <div class="cup-label">You</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="message-box" id="messageBox"></div>
+  <div class="button-group">
+    <button class="secondary" id="restartBtn" onclick="startNewRound()" disabled>Next Round</button>
+  </div>
+</div>
+<script>
+  const cups = [
+    document.getElementById('cup0'),
+    document.getElementById('cup1'),
+    document.getElementById('cup2')
+  ];
+  const wrappers = document.querySelectorAll('.cup-wrapper');
+  const floatingHeart = document.getElementById('floatingHeart');
+  const restartBtn = document.getElementById('restartBtn');
+  const statusMessage = document.getElementById('statusMessage');
+  const messageBox = document.getElementById('messageBox');
+  const hint = document.getElementById('hint');
+
+  let heartPos = 1;
+  let shuffling = false;
+  let roundDone = false;
+
+  function confetti() {
+    const colors = ['#e91e63','#ba68c8','#ff69b4','#ffc0cb','#ffb6d9','#ffffff'];
+    for (let i = 0; i < 90; i++) {
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.left = Math.random() * window.innerWidth + 'px';
+      el.style.top = '-10px';
+      el.style.background = colors[Math.floor(Math.random() * colors.length)];
+      el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      el.style.width = (6 + Math.random() * 8) + 'px';
+      el.style.height = (6 + Math.random() * 8) + 'px';
+      document.body.appendChild(el);
+      const dur = 2200 + Math.random() * 1800;
+      const dx = (Math.random() - 0.5) * 500;
+      el.animate([
+        { transform: 'translateY(0) translateX(0) rotate(0deg)', opacity: 1 },
+        { transform: `translateY(${window.innerHeight + 30}px) translateX(${dx}px) rotate(${Math.random()*720}deg)`, opacity: 0 }
+      ], { duration: dur, easing: 'cubic-bezier(0.25,0.46,0.45,0.94)' });
+      setTimeout(() => el.remove(), dur);
+    }
+  }
+
+  function dropHeartAnim() {
+    return new Promise(res => {
+      floatingHeart.style.animation = 'none';
+      floatingHeart.style.opacity = '0';
+      void floatingHeart.offsetWidth;
+      floatingHeart.style.animation = 'dropHeart 1.5s ease-in forwards';
+      setTimeout(() => {
+        floatingHeart.style.animation = 'none';
+        floatingHeart.style.opacity = '0';
+        res();
+      }, 1500);
+    });
+  }
+
+  function peekAndHide() {
+    return new Promise(res => {
+      const mid = cups[1];
+      mid.classList.add('revealed');
+      setTimeout(() => {
+        mid.classList.remove('revealed');
+        setTimeout(res, 400);
+      }, 800);
+    });
+  }
+
+  function swap(a, b) {
+    if (heartPos === a) heartPos = b;
+    else if (heartPos === b) heartPos = a;
+    if (a < b) {
+      wrappers[a].classList.add('moving-right');
+      wrappers[b].classList.add('moving-left');
+    } else {
+      wrappers[a].classList.add('moving-left');
+      wrappers[b].classList.add('moving-right');
+    }
+  }
+
+  function clearMoves() {
+    wrappers.forEach(w => w.classList.remove('moving-left','moving-right'));
+  }
+
+  function shuffle() {
+    shuffling = true;
+    hint.style.display = 'none';
+    cups[1].classList.remove('clickable');
+    cups[1].style.pointerEvents = 'none';
+    statusMessage.textContent = 'Shuffling...';
+
+    const seq = [[0,1],[2,0],[1,2],[0,1],[2,0],[1,2],[0,2]];
+    let i = 0;
+    function next() {
+      if (i >= seq.length) {
+        clearMoves();
+        shuffling = false;
+        statusMessage.textContent = 'Guess where the ❤️ is!';
+        hint.style.display = 'block';
+        cups[1].classList.add('clickable');
+        cups[1].style.pointerEvents = 'auto';
+        return;
+      }
+      swap(seq[i][0], seq[i][1]);
+      setTimeout(() => { clearMoves(); i++; next(); }, 620);
+    }
+    next();
+  }
+
+  function pickMiddleCup() {
+    if (shuffling || roundDone) return;
+    roundDone = true;
+    hint.style.display = 'none';
+    cups[1].classList.remove('clickable');
+    cups[1].style.pointerEvents = 'none';
+
+    setTimeout(() => {
+
+      // Step 1: reveal middle cup (❤️) first
+      cups[1].classList.add('revealed');
+
+      // Step 2: reveal left (I) and right (You) together after a pause
+      setTimeout(() => {
+        cups[0].classList.add('revealed');
+        cups[2].classList.add('revealed');
+
+        // Step 3: confetti fires after all three are revealed
+        setTimeout(() => {
+          confetti();
+
+          if (heartPos === 1) {
+            statusMessage.textContent = '🎉 You Won!';
+            messageBox.textContent = 'I ❤️ You';
+          } else {
+            statusMessage.textContent = '😔 Try Again!';
+            messageBox.textContent = '❌ Wrong cup!';
+          }
+          messageBox.classList.add('show');
+          restartBtn.disabled = false;
+
+        }, 500);
+
+      }, 600);
+
+    }, 200);
+  }
+
+  function startNewRound() {
+    heartPos = 1;
+    shuffling = false;
+    roundDone = false;
+
+    cups.forEach(cup => {
+      cup.classList.remove('revealed', 'clickable');
+      cup.style.pointerEvents = 'none';
+      cup.style.transform = '';
+    });
+
+    messageBox.classList.remove('show');
+    messageBox.textContent = '';
+    statusMessage.textContent = '';
+    restartBtn.disabled = true;
+    hint.style.display = 'block';
+
+    setTimeout(() => {
+      dropHeartAnim().then(() => {
+        peekAndHide().then(() => {
+          setTimeout(shuffle, 300);
+        });
+      });
+    }, 300);
+  }
+
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      dropHeartAnim().then(() => {
+        peekAndHide().then(() => {
+          setTimeout(shuffle, 300);
+        });
+      });
+    }, 500);
+  });
+</script>
+</body>
+</html>
